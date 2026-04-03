@@ -1450,13 +1450,21 @@ function closeDetail(e) {
 // ─── FETCH FULL PHOTOS ───
 async function fetchFullPhotos(listing) {
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
     const resp = await fetch(`https://${RAPIDAPI_HOST}/property/photos?property_id=${listing.propertyId}`, {
       headers: {
         'x-rapidapi-host': RAPIDAPI_HOST,
         'x-rapidapi-key': RAPIDAPI_KEY
-      }
+      },
+      signal: controller.signal
     });
-    if (!resp.ok) return;
+    clearTimeout(timeoutId);
+    if (!resp.ok) {
+      const loadingEl = document.getElementById('galleryLoading');
+      if (loadingEl) loadingEl.remove();
+      return;
+    }
     const data = await resp.json();
     // API returns a raw array of photo objects, not { photos: [...] }
     const photoArr = Array.isArray(data) ? data : (data.photos || []);
