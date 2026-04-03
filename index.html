@@ -1,0 +1,1541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Swipe House</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300;1,9..40,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --card-bg: #141414;
+    --surface: #1a1a1a;
+    --text: #f0ede6;
+    --text-dim: #8a8680;
+    --accent: #e8583e;
+    --accent-glow: rgba(232, 88, 62, 0.3);
+    --green: #3ecf8e;
+    --green-glow: rgba(62, 207, 142, 0.3);
+    --red: #e8583e;
+    --red-glow: rgba(232, 88, 62, 0.3);
+    --gold: #d4a853;
+    --radius: 20px;
+    --font-display: 'Instrument Serif', Georgia, serif;
+    --font-body: 'DM Sans', system-ui, sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100dvh;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ─── SETUP SCREEN ─── */
+  .setup-screen {
+    position: fixed; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    z-index: 100;
+    background: var(--bg);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+  .setup-screen.hidden {
+    opacity: 0; transform: scale(0.95);
+    pointer-events: none;
+  }
+  .setup-logo {
+    font-family: var(--font-display);
+    font-size: 3.5rem;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.25rem;
+  }
+  .setup-logo span { color: var(--accent); }
+  .setup-tagline {
+    color: var(--text-dim);
+    font-size: 0.95rem;
+    margin-bottom: 3rem;
+    font-weight: 300;
+    letter-spacing: 0.04em;
+  }
+  .setup-form {
+    display: flex; flex-direction: column;
+    gap: 1rem;
+    width: min(380px, 90vw);
+  }
+  .field-group {
+    display: flex; flex-direction: column; gap: 0.35rem;
+  }
+  .field-group label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-dim);
+    font-weight: 500;
+  }
+  .field-group input, .field-group select {
+    background: var(--surface);
+    border: 1px solid #2a2a2a;
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    padding: 0.75rem 1rem;
+    border-radius: 12px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .field-group input:focus, .field-group select:focus {
+    border-color: var(--accent);
+  }
+  .field-row {
+    display: flex; gap: 0.75rem;
+  }
+  .field-row .field-group { flex: 1; }
+
+  .setup-btn {
+    margin-top: 1rem;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    font-family: var(--font-body);
+    font-size: 1rem;
+    font-weight: 500;
+    padding: 0.9rem;
+    border-radius: 14px;
+    cursor: pointer;
+    letter-spacing: 0.02em;
+    transition: transform 0.15s, box-shadow 0.3s;
+  }
+  .setup-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 30px var(--accent-glow);
+  }
+  .setup-btn:disabled {
+    opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none;
+  }
+
+  /* ─── APP SHELL ─── */
+  .app {
+    display: flex; flex-direction: column;
+    height: 100dvh;
+    max-width: 480px;
+    margin: 0 auto;
+    position: relative;
+    opacity: 0;
+    transition: opacity 0.6s ease 0.3s;
+  }
+  .app.visible { opacity: 1; }
+
+  /* ─── HEADER ─── */
+  .header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1rem 1.25rem 0.5rem;
+    position: relative; z-index: 10;
+  }
+  .brand {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    letter-spacing: -0.02em;
+  }
+  .brand span { color: var(--accent); }
+  .header-actions {
+    display: flex; gap: 0.5rem; align-items: center;
+  }
+  .pill {
+    background: var(--surface);
+    border: 1px solid #2a2a2a;
+    color: var(--text-dim);
+    font-size: 0.7rem;
+    padding: 0.35rem 0.75rem;
+    border-radius: 100px;
+    font-family: var(--font-body);
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .pill:hover { border-color: var(--accent); color: var(--text); }
+
+  /* ─── CARD STACK ─── */
+  .card-stack {
+    flex: 1;
+    position: relative;
+    padding: 0.5rem 1rem;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .card {
+    position: absolute;
+    width: calc(100% - 2rem);
+    max-width: 440px;
+    aspect-ratio: 3/4.2;
+    max-height: calc(100dvh - 200px);
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: var(--card-bg);
+    touch-action: none;
+    user-select: none;
+    cursor: grab;
+    transition: transform 0.08s linear;
+    will-change: transform;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .card:active { cursor: grabbing; }
+
+  .card.animating {
+    transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+                opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .card.gone {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .card-bg {
+    position: absolute; inset: 0;
+    background-size: cover;
+    background-position: center;
+    transition: transform 6s ease-out;
+  }
+  .card:hover .card-bg { transform: scale(1.03); }
+
+  .card-overlay {
+    position: absolute; inset: 0;
+    background: linear-gradient(
+      to top,
+      rgba(0,0,0,0.92) 0%,
+      rgba(0,0,0,0.6) 30%,
+      rgba(0,0,0,0.1) 55%,
+      rgba(0,0,0,0.0) 100%
+    );
+  }
+
+  /* Swipe stamps */
+  .stamp {
+    position: absolute;
+    top: 2rem;
+    font-family: var(--font-display);
+    font-size: 3rem;
+    font-weight: 400;
+    padding: 0.25rem 1rem;
+    border: 4px solid;
+    border-radius: 12px;
+    opacity: 0;
+    transition: opacity 0.15s;
+    z-index: 5;
+    transform: rotate(-15deg);
+    text-shadow: 0 2px 20px rgba(0,0,0,0.5);
+    pointer-events: none;
+  }
+  .stamp-like {
+    right: 1.5rem;
+    color: var(--green);
+    border-color: var(--green);
+    transform: rotate(-15deg);
+  }
+  .stamp-nope {
+    left: 1.5rem;
+    color: var(--red);
+    border-color: var(--red);
+    transform: rotate(15deg);
+  }
+  .stamp-save {
+    left: 50%; top: 1.5rem;
+    transform: translateX(-50%);
+    color: var(--gold);
+    border-color: var(--gold);
+    font-size: 2.5rem;
+  }
+
+  .card-content {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    padding: 1.5rem;
+    z-index: 3;
+  }
+
+  .price-tag {
+    font-family: var(--font-display);
+    font-size: 2.2rem;
+    line-height: 1;
+    margin-bottom: 0.35rem;
+    letter-spacing: -0.02em;
+  }
+  .address {
+    font-size: 0.85rem;
+    color: rgba(255,255,255,0.7);
+    margin-bottom: 0.75rem;
+    font-weight: 300;
+  }
+  .stats {
+    display: flex; gap: 0.5rem; flex-wrap: wrap;
+  }
+  .stat {
+    background: rgba(255,255,255,0.1);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    padding: 0.4rem 0.75rem;
+    border-radius: 100px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  .stat svg {
+    display: inline-block;
+    vertical-align: -2px;
+    margin-right: 3px;
+  }
+
+  .photo-dots {
+    position: absolute;
+    top: 0.75rem; left: 50%;
+    transform: translateX(-50%);
+    display: flex; gap: 4px;
+    z-index: 5;
+  }
+  .photo-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.3);
+    transition: background 0.2s, transform 0.2s;
+  }
+  .photo-dot.active {
+    background: #fff;
+    transform: scale(1.3);
+  }
+
+  .photo-nav {
+    position: absolute; top: 0; bottom: 40%;
+    width: 35%; z-index: 4; cursor: pointer;
+  }
+  .photo-nav-left { left: 0; }
+  .photo-nav-right { right: 0; }
+
+  /* ─── ACTIONS BAR ─── */
+  .actions {
+    display: flex; align-items: center; justify-content: center;
+    gap: 1.25rem;
+    padding: 1rem 1rem 1.75rem;
+    position: relative; z-index: 10;
+  }
+  .action-btn {
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    border: 2px solid #2a2a2a;
+    background: var(--surface);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .action-btn svg { transition: transform 0.2s; }
+  .action-btn:hover svg { transform: scale(1.15); }
+
+  .action-btn.nope:hover {
+    border-color: var(--red);
+    box-shadow: 0 0 25px var(--red-glow);
+    background: rgba(232, 88, 62, 0.1);
+  }
+  .action-btn.save:hover {
+    border-color: var(--gold);
+    box-shadow: 0 0 25px rgba(212, 168, 83, 0.3);
+    background: rgba(212, 168, 83, 0.1);
+  }
+  .action-btn.like:hover {
+    border-color: var(--green);
+    box-shadow: 0 0 25px var(--green-glow);
+    background: rgba(62, 207, 142, 0.1);
+  }
+  .action-btn.undo:hover, .action-btn.info:hover {
+    border-color: var(--text-dim);
+  }
+  .action-btn.sm { width: 44px; height: 44px; }
+
+  /* ─── SAVED DRAWER ─── */
+  .drawer-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(4px);
+    z-index: 50;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.3s;
+  }
+  .drawer-overlay.open { opacity: 1; pointer-events: all; }
+
+  .drawer {
+    position: fixed;
+    bottom: 0; left: 50%;
+    transform: translateX(-50%) translateY(100%);
+    width: min(480px, 100%);
+    max-height: 80dvh;
+    background: var(--card-bg);
+    border-radius: var(--radius) var(--radius) 0 0;
+    z-index: 51;
+    transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+    overflow-y: auto;
+  }
+  .drawer.open { transform: translateX(-50%) translateY(0); }
+
+  .drawer-handle {
+    width: 40px; height: 4px;
+    background: #333;
+    border-radius: 2px;
+    margin: 0.75rem auto 0;
+  }
+  .drawer-title {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    padding: 1rem 1.25rem 0.75rem;
+  }
+  .saved-list {
+    padding: 0 1rem 2rem;
+    display: flex; flex-direction: column; gap: 0.75rem;
+  }
+  .saved-item {
+    display: flex; gap: 0.75rem;
+    background: var(--surface);
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid #2a2a2a;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  .saved-item:hover { border-color: var(--gold); }
+  .saved-thumb {
+    width: 90px; min-height: 80px;
+    background-size: cover;
+    background-position: center;
+    flex-shrink: 0;
+  }
+  .saved-info {
+    padding: 0.65rem 0.75rem 0.65rem 0;
+    display: flex; flex-direction: column; justify-content: center;
+  }
+  .saved-price {
+    font-family: var(--font-display);
+    font-size: 1.15rem;
+  }
+  .saved-addr {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    font-weight: 300;
+  }
+  .saved-stats-mini {
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    margin-top: 0.2rem;
+  }
+  .empty-saved {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--text-dim);
+    font-size: 0.9rem;
+  }
+
+  /* ─── DETAIL MODAL ─── */
+  .detail-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(6px);
+    z-index: 60;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.3s;
+    overflow-y: auto;
+  }
+  .detail-overlay.open { opacity: 1; pointer-events: all; }
+
+  .detail-modal {
+    width: min(480px, 100%);
+    margin: 2rem auto;
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    overflow: hidden;
+    transform: translateY(30px);
+    transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .detail-overlay.open .detail-modal { transform: translateY(0); }
+
+  .detail-hero {
+    width: 100%;
+    aspect-ratio: 4/3;
+    background-size: cover;
+    background-position: center;
+    position: relative;
+  }
+  .detail-gallery {
+    width: 100%;
+    aspect-ratio: 4/3;
+    position: relative;
+    overflow: hidden;
+    background: var(--card-bg);
+  }
+  .detail-gallery-img {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    transition: opacity 0.35s ease;
+  }
+  .detail-gallery-img.active { opacity: 1; }
+  .gallery-dots {
+    position: absolute; bottom: 0.75rem;
+    left: 50%; transform: translateX(-50%);
+    display: flex; gap: 6px;
+  }
+  .gallery-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.4);
+    transition: background 0.2s, transform 0.2s;
+  }
+  .gallery-dot.active { background: #fff; transform: scale(1.3); }
+  .gallery-arrow {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    width: 36px; height: 36px;
+    border: none; border-radius: 50%;
+    background: rgba(0,0,0,0.45);
+    backdrop-filter: blur(6px);
+    color: #fff; font-size: 1.5rem;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s;
+  }
+  .gallery-arrow:hover { background: rgba(0,0,0,0.7); }
+  .gallery-prev { left: 0.5rem; }
+  .gallery-next { right: 0.5rem; }
+  .gallery-counter {
+    position: absolute; top: 0.75rem; left: 0.75rem;
+    background: rgba(0,0,0,0.55);
+    backdrop-filter: blur(6px);
+    padding: 0.3rem 0.7rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    color: #fff;
+    font-weight: 500;
+    letter-spacing: 0.03em;
+    pointer-events: none;
+  }
+  .gallery-loading {
+    position: absolute; bottom: 0.75rem; right: 0.75rem;
+    background: rgba(0,0,0,0.55);
+    backdrop-filter: blur(6px);
+    padding: 0.3rem 0.7rem;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    color: rgba(255,255,255,0.7);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .gallery-loading .spinner {
+    width: 12px; height: 12px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .detail-close {
+    position: absolute; top: 1rem; right: 1rem;
+    width: 36px; height: 36px;
+    background: rgba(0,0,0,0.5);
+    backdrop-filter: blur(8px);
+    border: none;
+    border-radius: 50%;
+    color: #fff;
+    font-size: 1.2rem;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .detail-body { padding: 1.5rem; }
+  .detail-price {
+    font-family: var(--font-display);
+    font-size: 2rem;
+    margin-bottom: 0.25rem;
+  }
+  .detail-addr {
+    color: var(--text-dim);
+    font-size: 0.9rem;
+    font-weight: 300;
+    margin-bottom: 1.25rem;
+  }
+  .detail-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
+  .detail-stat-card {
+    background: var(--surface);
+    border-radius: 12px;
+    padding: 0.75rem;
+    text-align: center;
+    border: 1px solid #2a2a2a;
+  }
+  .detail-stat-val {
+    font-family: var(--font-display);
+    font-size: 1.4rem;
+  }
+  .detail-stat-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    margin-top: 0.15rem;
+  }
+  .detail-section-title {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+  }
+  .detail-desc {
+    font-size: 0.88rem;
+    line-height: 1.6;
+    color: rgba(255,255,255,0.75);
+    font-weight: 300;
+    margin-bottom: 1.25rem;
+  }
+  .detail-meta {
+    display: flex; flex-wrap: wrap; gap: 0.4rem;
+    margin-bottom: 1.5rem;
+  }
+  .detail-meta .stat {
+    background: var(--surface);
+    border-color: #2a2a2a;
+  }
+  .detail-link {
+    display: block;
+    text-align: center;
+    padding: 0.85rem;
+    background: var(--accent);
+    color: #fff;
+    border-radius: 14px;
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 0.95rem;
+    transition: box-shadow 0.3s;
+  }
+  .detail-link:hover { box-shadow: 0 8px 30px var(--accent-glow); }
+
+  /* ─── LOADING / EMPTY ─── */
+  .loading-state, .empty-state {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center; padding: 2rem;
+  }
+  .spinner {
+    width: 36px; height: 36px;
+    border: 3px solid #2a2a2a;
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-bottom: 1rem;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { color: var(--text-dim); font-size: 0.9rem; font-weight: 300; }
+  .empty-icon { font-size: 3rem; margin-bottom: 0.75rem; opacity: 0.5; }
+  .empty-title {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+  }
+  .empty-sub { color: var(--text-dim); font-size: 0.85rem; font-weight: 300; }
+  .retry-btn {
+    margin-top: 1rem;
+    background: var(--surface);
+    border: 1px solid #2a2a2a;
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    padding: 0.6rem 1.25rem;
+    border-radius: 10px;
+    cursor: pointer;
+  }
+
+  /* ─── ERROR TOAST ─── */
+  .toast {
+    position: fixed;
+    top: 1rem; left: 50%;
+    transform: translateX(-50%) translateY(-120%);
+    background: var(--surface);
+    border: 1px solid #333;
+    color: var(--text);
+    font-size: 0.8rem;
+    padding: 0.6rem 1.25rem;
+    border-radius: 100px;
+    z-index: 999;
+    transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+    white-space: nowrap;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* ─── KEYBOARD HINT ─── */
+  .key-hints {
+    position: fixed;
+    bottom: 0.5rem; left: 50%;
+    transform: translateX(-50%);
+    display: flex; gap: 1rem;
+    z-index: 5;
+    opacity: 0.35;
+    font-size: 0.6rem;
+    color: var(--text-dim);
+    letter-spacing: 0.06em;
+  }
+  .key-hints kbd {
+    display: inline-block;
+    background: var(--surface);
+    border: 1px solid #2a2a2a;
+    padding: 0.1rem 0.35rem;
+    border-radius: 4px;
+    font-family: var(--font-body);
+    font-size: 0.55rem;
+    margin-right: 2px;
+  }
+
+  @media (max-width: 500px) {
+    .key-hints { display: none; }
+    .card { aspect-ratio: 3/4.6; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ─── SETUP SCREEN ─── -->
+<div class="setup-screen" id="setupScreen">
+  <div class="setup-logo">Swipe<span>House</span></div>
+  <div class="setup-tagline">Find your dream home, one swipe at a time</div>
+  <div class="setup-form">
+    <div class="field-row">
+      <div class="field-group">
+        <label>City</label>
+        <input type="text" id="inputCity" placeholder="Austin" value="Austin">
+      </div>
+      <div class="field-group">
+        <label>State</label>
+        <select id="inputState">
+          <option value="AL">AL</option><option value="AK">AK</option><option value="AZ">AZ</option>
+          <option value="AR">AR</option><option value="CA">CA</option><option value="CO">CO</option>
+          <option value="CT">CT</option><option value="DE">DE</option><option value="FL">FL</option>
+          <option value="GA">GA</option><option value="HI">HI</option><option value="ID">ID</option>
+          <option value="IL">IL</option><option value="IN">IN</option><option value="IA">IA</option>
+          <option value="KS">KS</option><option value="KY">KY</option><option value="LA">LA</option>
+          <option value="ME">ME</option><option value="MD">MD</option><option value="MA">MA</option>
+          <option value="MI">MI</option><option value="MN">MN</option><option value="MS">MS</option>
+          <option value="MO">MO</option><option value="MT">MT</option><option value="NE">NE</option>
+          <option value="NV">NV</option><option value="NH">NH</option><option value="NJ">NJ</option>
+          <option value="NM">NM</option><option value="NY">NY</option><option value="NC">NC</option>
+          <option value="ND">ND</option><option value="OH">OH</option><option value="OK">OK</option>
+          <option value="OR">OR</option><option value="PA">PA</option><option value="RI">RI</option>
+          <option value="SC">SC</option><option value="SD">SD</option><option value="TN">TN</option>
+          <option value="TX" selected>TX</option><option value="UT">UT</option><option value="VT">VT</option>
+          <option value="VA">VA</option><option value="WA">WA</option><option value="WV">WV</option>
+          <option value="WI">WI</option><option value="WY">WY</option>
+        </select>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field-group">
+        <label>Min Price</label>
+        <input type="text" id="inputMinPrice" placeholder="200000" value="">
+      </div>
+      <div class="field-group">
+        <label>Max Price</label>
+        <input type="text" id="inputMaxPrice" placeholder="800000" value="">
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field-group">
+        <label>Bedrooms (min)</label>
+        <select id="inputBeds">
+          <option value="">Any</option>
+          <option value="1">1+</option><option value="2">2+</option>
+          <option value="3" selected>3+</option><option value="4">4+</option><option value="5">5+</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label>Bathrooms (min)</label>
+        <select id="inputBaths">
+          <option value="">Any</option>
+          <option value="1">1+</option><option value="2" selected>2+</option>
+          <option value="3">3+</option><option value="4">4+</option>
+        </select>
+      </div>
+    </div>
+    <div class="field-group">
+      <label>Property Type</label>
+      <select id="inputType">
+        <option value="">All Types</option>
+        <option value="Single Family" selected>Single Family</option>
+        <option value="Condo">Condo</option>
+        <option value="Townhouse">Townhouse</option>
+        <option value="Multi Family">Multi Family</option>
+      </select>
+    </div>
+    <button class="setup-btn" id="startBtn" onclick="startApp()">Start Swiping</button>
+  </div>
+</div>
+
+<!-- ─── TOAST ─── -->
+<div class="toast" id="toast"></div>
+
+<!-- ─── MAIN APP ─── -->
+<div class="app" id="app">
+  <div class="header">
+    <div class="brand">Swipe<span>House</span></div>
+    <div class="header-actions">
+      <button class="pill" id="counterPill">0 saved</button>
+      <button class="pill" onclick="showSetup()">⟳ Search</button>
+    </div>
+  </div>
+
+  <div class="card-stack" id="cardStack">
+    <div class="loading-state" id="loadingState">
+      <div class="spinner"></div>
+      <div class="loading-text">Finding homes for you...</div>
+    </div>
+    <div class="empty-state" id="emptyState" style="display:none">
+      <div class="empty-icon">🏠</div>
+      <div class="empty-title">That's all for now</div>
+      <div class="empty-sub">You've seen every listing in this search</div>
+      <button class="retry-btn" onclick="showSetup()">New Search</button>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="action-btn sm undo" onclick="undoSwipe()" title="Undo (Z)">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8a8680" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+    </button>
+    <button class="action-btn nope" onclick="swipeAction('left')" title="Nope (←)">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#e8583e" stroke-width="2.4" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <button class="action-btn save" onclick="swipeAction('up')" title="Save (↑)">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#d4a853" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+    </button>
+    <button class="action-btn like" onclick="swipeAction('right')" title="Like (→)">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#3ecf8e" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+    </button>
+    <button class="action-btn sm info" onclick="showDetail()" title="Details (Space)">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8a8680" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- ─── SAVED DRAWER ─── -->
+<div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-handle"></div>
+  <div class="drawer-title">Saved Homes</div>
+  <div class="saved-list" id="savedList">
+    <div class="empty-saved">No saved homes yet. Swipe up or tap ★ to save.</div>
+  </div>
+</div>
+
+<!-- ─── DETAIL MODAL ─── -->
+<div class="detail-overlay" id="detailOverlay" onclick="closeDetail(event)">
+  <div class="detail-modal" id="detailModal"></div>
+</div>
+
+<!-- ─── KEYBOARD HINTS ─── -->
+<div class="key-hints">
+  <span><kbd>←</kbd> Nope</span>
+  <span><kbd>→</kbd> Like</span>
+  <span><kbd>↑</kbd> Save</span>
+  <span><kbd>Z</kbd> Undo</span>
+  <span><kbd>Space</kbd> Details</span>
+</div>
+
+<script>
+// ─── CONFIG ───
+const RAPIDAPI_KEY = '27fa1e217dmsh2301829fe0dcfcfp1e05dbjsncec03fca7fb4';
+const RAPIDAPI_HOST = 'realtor16.p.rapidapi.com';
+
+// ─── STATE ───
+let listings = [];
+let currentIndex = 0;
+let savedHomes = [];
+let history = [];
+let cardElements = [];
+let isDragging = false;
+let startX = 0, startY = 0, currentX = 0, currentY = 0;
+let activeCard = null;
+let currentPhotoIndex = 0;
+let searchParams = {};
+
+// ─── FORMAT HELPERS ───
+function fmt(n) {
+  if (!n && n !== 0) return '—';
+  if (n >= 1000000) return '$' + (n / 1000000).toFixed(n % 1000000 === 0 ? 0 : 1) + 'M';
+  if (n >= 1000) return '$' + (n / 1000).toFixed(0) + 'K';
+  return '$' + n.toLocaleString();
+}
+function fmtFull(n) {
+  if (!n && n !== 0) return '—';
+  return '$' + n.toLocaleString();
+}
+function fmtSqft(n) {
+  if (!n) return '—';
+  return n.toLocaleString() + ' sqft';
+}
+function daysAgo(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  const days = Math.floor((Date.now() - d) / 86400000);
+  if (days === 0) return 'Today';
+  if (days === 1) return 'Yesterday';
+  return days + ' days ago';
+}
+
+// ─── API ───
+// Map property type from our form to Realtor API type values
+const typeMap = {
+  'Single Family': 'single_family',
+  'Condo': 'condos',
+  'Townhouse': 'townhomes',
+  'Multi-Family': 'multi_family',
+  'Land': 'land',
+  '': ''
+};
+
+// Upscale a Realtor.com photo URL (replace size suffix before .jpg)
+function photoUrl(href, size) {
+  if (!href) return '';
+  // size: 's'=120x80, 'l'=300x200, 'x'=460x307, 'o'=1024x684
+  return href.replace(/s\.jpg$/, size + '.jpg');
+}
+
+async function fetchListings(params) {
+  const query = new URLSearchParams();
+  const loc = params.city + (params.state ? ', ' + params.state : '');
+  query.set('location', loc);
+  const apiType = typeMap[params.propertyType] || '';
+  if (apiType) query.set('type', apiType);
+  if (params.beds) query.set('beds-min', params.beds);
+  if (params.baths) query.set('baths-min', params.baths);
+  if (params.minPrice) query.set('list_price-min', params.minPrice);
+  if (params.maxPrice) query.set('list_price-max', params.maxPrice);
+  query.set('limit', '200');
+  query.set('sort', 'newest_listing');
+
+  const url = `https://${RAPIDAPI_HOST}/search/forsale?${query}`;
+  const resp = await fetch(url, {
+    headers: {
+      'Content-Type': 'application/json',
+      'x-rapidapi-host': RAPIDAPI_HOST,
+      'x-rapidapi-key': RAPIDAPI_KEY
+    }
+  });
+  if (!resp.ok) {
+    const errText = await resp.text();
+    throw new Error(`API ${resp.status}: ${errText}`);
+  }
+  const data = await resp.json();
+  const raw = data.properties || [];
+
+  // Normalize to a consistent shape used by the rest of the app
+  return raw.map(p => {
+    const desc = p.description || {};
+    const addr = p.location?.address || {};
+    const photos = (p.photos || []).map(ph => ph.href);
+    const primaryPhoto = p.primary_photo?.href || photos[0] || '';
+    return {
+      id: p.property_id || p.listing_id || '',
+      formattedAddress: [addr.line, addr.city, addr.state_code, addr.postal_code].filter(Boolean).join(', '),
+      addressLine1: addr.line || '',
+      city: addr.city || '',
+      state: addr.state_code || '',
+      zipCode: addr.postal_code || '',
+      latitude: addr.coordinate?.lat,
+      longitude: addr.coordinate?.lon,
+      propertyType: (desc.type || '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+      bedrooms: desc.beds ?? null,
+      bathrooms: desc.baths_consolidated ?? desc.baths_min ?? null,
+      squareFootage: desc.sqft ?? null,
+      lotSize: desc.lot_sqft ?? null,
+      yearBuilt: desc.year_built ?? null,
+      status: p.status === 'for_sale' ? 'Active' : (p.status || ''),
+      price: p.list_price ?? 0,
+      listedDate: p.list_date || null,
+      daysOnMarket: p.list_date ? Math.floor((Date.now() - new Date(p.list_date)) / 86400000) : null,
+      // Photos!
+      primaryPhoto: primaryPhoto,
+      photos: photos,
+      // Agent info (search results may not include this)
+      listingAgent: null,
+      listingOffice: null,
+      permalink: p.permalink || '',
+      propertyId: p.property_id || ''
+    };
+  }).sort(() => Math.random() - 0.5);
+}
+
+// ─── APP INIT ───
+async function startApp() {
+  const city = document.getElementById('inputCity').value.trim();
+  const state = document.getElementById('inputState').value;
+  if (!city) { showToast('Enter a city name'); return; }
+
+  const btn = document.getElementById('startBtn');
+  btn.disabled = true;
+  btn.textContent = 'Searching...';
+
+  searchParams = {
+    city, state,
+    minPrice: document.getElementById('inputMinPrice').value.trim() || undefined,
+    maxPrice: document.getElementById('inputMaxPrice').value.trim() || undefined,
+    beds: document.getElementById('inputBeds').value || undefined,
+    baths: document.getElementById('inputBaths').value || undefined,
+    propertyType: document.getElementById('inputType').value || undefined,
+  };
+
+  try {
+    listings = await fetchListings(searchParams);
+    currentIndex = 0;
+    savedHomes = [];
+    history = [];
+    updateSavedCount();
+
+    if (listings.length === 0) {
+      showToast('No listings found — try broadening your search');
+      btn.disabled = false;
+      btn.textContent = 'Start Swiping';
+      return;
+    }
+
+    const setupEl = document.getElementById('setupScreen');
+    setupEl.classList.add('hidden');
+    setTimeout(() => { if (setupEl.classList.contains('hidden')) setupEl.style.display = 'none'; }, 700);
+    document.getElementById('app').classList.add('visible');
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('emptyState').style.display = 'none';
+
+    renderCards();
+    showToast(listings.length + ' homes found!');
+  } catch (e) {
+    console.error(e);
+    showToast('Error: ' + e.message);
+  }
+  btn.disabled = false;
+  btn.textContent = 'Start Swiping';
+}
+
+function showSetup() {
+  const setupEl = document.getElementById('setupScreen');
+  setupEl.style.display = 'flex';
+  setupEl.classList.remove('hidden');
+  document.getElementById('app').classList.remove('visible');
+  // Clean up cards
+  document.querySelectorAll('.card').forEach(c => c.remove());
+}
+
+// ─── CARD RENDERING ───
+// Gradient palettes as fallback
+const gradients = [
+  ['#1a1a2e', '#16213e', '#0f3460'],  // deep navy
+  ['#2d132c', '#801336', '#c72c41'],  // berry
+  ['#0a3d62', '#3c6382', '#60a3bc'],  // ocean
+  ['#1e5128', '#4e9f3d', '#d8e9a8'],  // forest
+  ['#4a1942', '#6a2c70', '#b83b5e'],  // plum
+  ['#2c3e50', '#34495e', '#5d6d7e'],  // slate
+  ['#1b1a17', '#f0a500', '#e45826'],  // amber
+  ['#0c0032', '#190061', '#240090'],  // deep purple
+  ['#1a1a2e', '#e94560', '#533483'],  // neon nights
+  ['#0d1117', '#1f6feb', '#58a6ff'],  // electric blue
+];
+
+function getGradient(listing) {
+  const addr = listing.formattedAddress || listing.id || '';
+  let hash = 0;
+  for (let i = 0; i < addr.length; i++) hash = ((hash << 5) - hash) + addr.charCodeAt(i);
+  const idx = Math.abs(hash) % gradients.length;
+  const g = gradients[idx];
+  return `linear-gradient(135deg, ${g[0]} 0%, ${g[1]} 50%, ${g[2]} 100%)`;
+}
+
+// Photo helpers — use real listing photos with gradient fallback
+function getCardBgStyle(listing) {
+  const src = listing.primaryPhoto;
+  if (src) {
+    const big = photoUrl(src, 'o'); // 1024px
+    return `background-image: url('${big}'); background-size: cover; background-position: center;`;
+  }
+  return `background: ${getGradient(listing)};`;
+}
+
+function getThumbBgStyle(listing) {
+  const src = listing.primaryPhoto;
+  if (src) {
+    const thumb = photoUrl(src, 'l'); // 300px
+    return `background-image: url('${thumb}'); background-size: cover; background-position: center;`;
+  }
+  return `background: ${getGradient(listing)};`;
+}
+
+function getHeroBgStyle(listing) {
+  const src = listing.primaryPhoto;
+  if (src) {
+    const big = photoUrl(src, 'o'); // 1024px
+    return `background-image: url('${big}'); background-size: cover; background-position: center;`;
+  }
+  return `background: ${getGradient(listing)};`;
+}
+
+function getAddress(l) {
+  if (l.formattedAddress) return l.formattedAddress;
+  const parts = [];
+  if (l.addressLine1) parts.push(l.addressLine1);
+  if (l.city) parts.push(l.city);
+  if (l.state) parts.push(l.state);
+  if (l.zipCode) parts.push(l.zipCode);
+  return parts.join(', ') || 'Address unavailable';
+}
+
+function renderCards() {
+  // Remove old
+  document.querySelectorAll('.card').forEach(c => c.remove());
+  cardElements = [];
+
+  const stack = document.getElementById('cardStack');
+  const total = Math.min(3, listings.length - currentIndex);
+
+  for (let i = total - 1; i >= 0; i--) {
+    const idx = currentIndex + i;
+    if (idx >= listings.length) continue;
+    const listing = listings[idx];
+    const card = createCard(listing, i);
+    stack.appendChild(card);
+    cardElements.unshift(card);
+  }
+
+  if (cardElements.length > 0) {
+    attachDrag(cardElements[0]);
+  }
+  if (currentIndex >= listings.length) {
+    document.getElementById('emptyState').style.display = 'flex';
+  }
+}
+
+function createCard(listing, stackIdx) {
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.style.zIndex = 10 - stackIdx;
+  if (stackIdx > 0) {
+    card.style.transform = `scale(${1 - stackIdx * 0.04}) translateY(${stackIdx * 12}px)`;
+    card.style.pointerEvents = 'none';
+  }
+
+  const beds = listing.bedrooms ?? '—';
+  const baths = listing.bathrooms ?? '—';
+  const sqft = listing.squareFootage ?? null;
+  const yearBuilt = listing.yearBuilt ?? null;
+  const price = listing.price ?? 0;
+  const lotSize = listing.lotSize ?? null;
+  const propType = listing.propertyType ?? '';
+  const county = listing.county ?? '';
+  const dom = listing.daysOnMarket ?? null;
+
+  card.innerHTML = `
+    <div class="card-bg" style="${getCardBgStyle(listing)}"></div>
+    <div class="card-overlay"></div>
+    <div class="stamp stamp-like">LIKED</div>
+    <div class="stamp stamp-nope">NOPE</div>
+    <div class="stamp stamp-save">&#9733; SAVED</div>
+    <div class="card-content">
+      <div class="price-tag">${fmtFull(price)}</div>
+      <div class="address">${getAddress(listing)}</div>
+      <div class="stats">
+        <span class="stat">${beds} bd</span>
+        <span class="stat">${baths} ba</span>
+        ${sqft ? `<span class="stat">${fmtSqft(sqft)}</span>` : ''}
+        ${propType ? `<span class="stat">${propType}</span>` : ''}
+        ${yearBuilt ? `<span class="stat">Built ${yearBuilt}</span>` : ''}
+        ${dom !== null ? `<span class="stat">${dom}d on market</span>` : ''}
+      </div>
+    </div>
+  `;
+
+  card._listing = listing;
+  return card;
+}
+
+// ─── PHOTO NAVIGATION ───
+function nextPhoto(e) {
+  e.stopPropagation();
+  const card = e.target.closest('.card');
+  if (!card) return;
+  const photos = card._photos;
+  let idx = parseInt(card.dataset.photoIndex) + 1;
+  if (idx >= photos.length) idx = 0;
+  setCardPhoto(card, idx);
+}
+function prevPhoto(e) {
+  e.stopPropagation();
+  const card = e.target.closest('.card');
+  if (!card) return;
+  const photos = card._photos;
+  let idx = parseInt(card.dataset.photoIndex) - 1;
+  if (idx < 0) idx = photos.length - 1;
+  setCardPhoto(card, idx);
+}
+function setCardPhoto(card, idx) {
+  card.dataset.photoIndex = idx;
+  const bg = card.querySelector('.card-bg');
+  bg.style.backgroundImage = `url('${card._photos[idx]}')`;
+  const dots = card.querySelectorAll('.photo-dot');
+  dots.forEach((d, i) => d.classList.toggle('active', i === idx));
+}
+
+// ─── DRAG / SWIPE ───
+function attachDrag(card) {
+  card.addEventListener('pointerdown', onPointerDown);
+  card.addEventListener('pointermove', onPointerMove);
+  card.addEventListener('pointerup', onPointerUp);
+  card.addEventListener('pointercancel', onPointerUp);
+}
+
+function onPointerDown(e) {
+  if (e.target.closest('.photo-nav')) return;
+  const card = e.currentTarget;
+  isDragging = true;
+  startX = e.clientX;
+  startY = e.clientY;
+  currentX = 0;
+  currentY = 0;
+  activeCard = card;
+  card.setPointerCapture(e.pointerId);
+  card.style.transition = 'none';
+}
+
+function onPointerMove(e) {
+  if (!isDragging || !activeCard) return;
+  currentX = e.clientX - startX;
+  currentY = e.clientY - startY;
+  const rotate = currentX * 0.08;
+  activeCard.style.transform = `translate(${currentX}px, ${currentY}px) rotate(${rotate}deg)`;
+
+  // Show stamps
+  const likeStamp = activeCard.querySelector('.stamp-like');
+  const nopeStamp = activeCard.querySelector('.stamp-nope');
+  const saveStamp = activeCard.querySelector('.stamp-save');
+  const threshold = 60;
+
+  likeStamp.style.opacity = Math.max(0, Math.min(1, (currentX - threshold * 0.5) / threshold));
+  nopeStamp.style.opacity = Math.max(0, Math.min(1, (-currentX - threshold * 0.5) / threshold));
+  saveStamp.style.opacity = Math.max(0, Math.min(1, (-currentY - threshold) / threshold));
+}
+
+function onPointerUp(e) {
+  if (!isDragging || !activeCard) return;
+  isDragging = false;
+  const card = activeCard;
+  activeCard = null;
+  const threshold = 100;
+  const upThreshold = 80;
+
+  if (currentY < -upThreshold && Math.abs(currentY) > Math.abs(currentX)) {
+    flingCard(card, 'up');
+  } else if (currentX > threshold) {
+    flingCard(card, 'right');
+  } else if (currentX < -threshold) {
+    flingCard(card, 'left');
+  } else {
+    // Snap back
+    card.classList.add('animating');
+    card.style.transform = '';
+    card.querySelector('.stamp-like').style.opacity = 0;
+    card.querySelector('.stamp-nope').style.opacity = 0;
+    card.querySelector('.stamp-save').style.opacity = 0;
+    setTimeout(() => card.classList.remove('animating'), 450);
+  }
+}
+
+function flingCard(card, direction) {
+  card.classList.add('animating');
+  let tx, ty;
+  if (direction === 'left') { tx = -window.innerWidth * 1.5; ty = currentY; }
+  else if (direction === 'right') { tx = window.innerWidth * 1.5; ty = currentY; }
+  else { tx = 0; ty = -window.innerHeight * 1.2; }
+
+  const rotate = direction === 'up' ? 0 : (tx > 0 ? 25 : -25);
+  card.style.transform = `translate(${tx}px, ${ty}px) rotate(${rotate}deg)`;
+  card.classList.add('gone');
+
+  const listing = card._listing;
+  history.push({ listing, index: currentIndex, direction });
+
+  if (direction === 'up') {
+    saveListing(listing);
+  } else if (direction === 'right') {
+    // Liked — could track this too
+  }
+
+  currentIndex++;
+  setTimeout(() => {
+    card.remove();
+    renderCards();
+  }, 450);
+}
+
+// ─── BUTTON ACTIONS ───
+function swipeAction(dir) {
+  const cards = document.querySelectorAll('.card:not(.gone)');
+  const card = cards.length ? cards[cards.length - 1] : null;
+  if (!card) return;
+  currentX = 0; currentY = 0;
+  if (dir === 'left') currentX = -120;
+  if (dir === 'right') currentX = 120;
+  if (dir === 'up') currentY = -120;
+
+  // Flash stamp
+  if (dir === 'right') card.querySelector('.stamp-like').style.opacity = 1;
+  if (dir === 'left') card.querySelector('.stamp-nope').style.opacity = 1;
+  if (dir === 'up') card.querySelector('.stamp-save').style.opacity = 1;
+
+  setTimeout(() => flingCard(card, dir), 180);
+}
+
+function undoSwipe() {
+  if (history.length === 0) { showToast('Nothing to undo'); return; }
+  const prev = history.pop();
+  currentIndex--;
+
+  // Remove saved if it was saved
+  if (prev.direction === 'up') {
+    savedHomes = savedHomes.filter(s =>
+      getAddress(s) !== getAddress(prev.listing)
+    );
+    updateSavedCount();
+    renderSavedList();
+  }
+  renderCards();
+  showToast('Undo!');
+}
+
+// ─── KEYBOARD ───
+document.addEventListener('keydown', (e) => {
+  if (document.querySelector('.setup-screen:not(.hidden)')) return;
+  if (e.key === 'ArrowLeft') swipeAction('left');
+  if (e.key === 'ArrowRight') swipeAction('right');
+  if (e.key === 'ArrowUp') { e.preventDefault(); swipeAction('up'); }
+  if (e.key === 'z' || e.key === 'Z') undoSwipe();
+  if (e.key === ' ') { e.preventDefault(); showDetail(); }
+  if (e.key === 'Escape') { closeDrawer(); closeDetail(); }
+});
+
+// ─── SAVE ───
+function saveListing(listing) {
+  savedHomes.push(listing);
+  updateSavedCount();
+  renderSavedList();
+  showToast('Saved! ★');
+}
+function updateSavedCount() {
+  document.getElementById('counterPill').textContent = savedHomes.length + ' saved';
+}
+
+// ─── SAVED DRAWER ───
+document.getElementById('counterPill').addEventListener('click', () => {
+  document.getElementById('drawerOverlay').classList.add('open');
+  document.getElementById('drawer').classList.add('open');
+  renderSavedList();
+});
+function closeDrawer() {
+  document.getElementById('drawerOverlay').classList.remove('open');
+  document.getElementById('drawer').classList.remove('open');
+}
+function renderSavedList() {
+  const el = document.getElementById('savedList');
+  if (savedHomes.length === 0) {
+    el.innerHTML = '<div class="empty-saved">No saved homes yet. Swipe up or tap ★ to save.</div>';
+    return;
+  }
+  el.innerHTML = savedHomes.map((l, i) => {
+    const price = l.price ?? 0;
+    const beds = l.bedrooms ?? '—';
+    const baths = l.bathrooms ?? '—';
+    return `<div class="saved-item" onclick="openSavedDetail(${i})">
+      <div class="saved-thumb" style="${getThumbBgStyle(l)}"></div>
+      <div class="saved-info">
+        <div class="saved-price">${fmtFull(price)}</div>
+        <div class="saved-addr">${getAddress(l)}</div>
+        <div class="saved-stats-mini">${beds} bd · ${baths} ba</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function openSavedDetail(idx) {
+  closeDrawer();
+  showDetailFor(savedHomes[idx]);
+}
+
+// ─── DETAIL MODAL ───
+function showDetail() {
+  // The top card is the last .card in DOM order (highest z-index)
+  const cards = document.querySelectorAll('.card:not(.gone)');
+  const card = cards.length ? cards[cards.length - 1] : null;
+  if (!card) return;
+  showDetailFor(card._listing);
+}
+function showDetailFor(listing) {
+  const beds = listing.bedrooms ?? '—';
+  const baths = listing.bathrooms ?? '—';
+  const sqft = listing.squareFootage ?? null;
+  const price = listing.price ?? 0;
+  const yearBuilt = listing.yearBuilt ?? null;
+  const lotSize = listing.lotSize ?? null;
+  const status = listing.status ?? 'Active';
+  const propertyType = listing.propertyType ?? '';
+  const daysOnMarket = listing.daysOnMarket ?? null;
+
+  // Build photo gallery for detail view (start with search-result photos, then lazy-fetch full set)
+  const photos = listing._fullPhotos || listing.photos || [];
+  const hasPhotos = photos.length > 0;
+  const galleryHtml = hasPhotos
+    ? `<div class="detail-gallery" id="detailGallery">
+        ${photos.map((ph, i) => `<img src="${photoUrl(ph, 'o')}" class="detail-gallery-img ${i === 0 ? 'active' : ''}" data-idx="${i}" loading="lazy">`).join('')}
+        <span class="gallery-counter" id="galleryCounter">1 / ${photos.length}</span>
+        ${!listing._fullPhotos && listing.propertyId ? `<span class="gallery-loading" id="galleryLoading"><span class="spinner"></span>Loading all photos</span>` : ''}
+        <button class="gallery-arrow gallery-prev" onclick="galleryNav(-1)">&#8249;</button>
+        <button class="gallery-arrow gallery-next" onclick="galleryNav(1)">&#8250;</button>
+      </div>`
+    : `<div class="detail-hero" style="${getHeroBgStyle(listing)}">
+        <button class="detail-close" onclick="closeDetail()">&#10005;</button>
+      </div>`;
+
+  const realtorUrl = listing.permalink ? 'https://www.realtor.com/realestateandhomes-detail/' + listing.permalink : '';
+
+  const modal = document.getElementById('detailModal');
+  modal.innerHTML = `
+    ${photos.length > 1 ? `<div style="position:relative">${galleryHtml}<button class="detail-close" onclick="closeDetail()">&#10005;</button></div>` : `<div class="detail-hero" style="${getHeroBgStyle(listing)}"><button class="detail-close" onclick="closeDetail()">&#10005;</button></div>`}
+    <div class="detail-body">
+      <div class="detail-price">${fmtFull(price)}</div>
+      <div class="detail-addr">${getAddress(listing)}</div>
+      <div class="detail-stats-grid">
+        <div class="detail-stat-card"><div class="detail-stat-val">${beds}</div><div class="detail-stat-label">Bedrooms</div></div>
+        <div class="detail-stat-card"><div class="detail-stat-val">${baths}</div><div class="detail-stat-label">Bathrooms</div></div>
+        <div class="detail-stat-card"><div class="detail-stat-val">${sqft ? sqft.toLocaleString() : '—'}</div><div class="detail-stat-label">Sq Ft</div></div>
+      </div>
+      <div class="detail-meta">
+        ${status ? `<span class="stat">${status}</span>` : ''}
+        ${propertyType ? `<span class="stat">${propertyType}</span>` : ''}
+        ${yearBuilt ? `<span class="stat">Built ${yearBuilt}</span>` : ''}
+        ${lotSize ? `<span class="stat">Lot ${lotSize.toLocaleString()} sqft</span>` : ''}
+        ${daysOnMarket !== null ? `<span class="stat">${daysOnMarket} days on market</span>` : ''}
+        ${listing.listedDate ? `<span class="stat">Listed ${daysAgo(listing.listedDate)}</span>` : ''}
+      </div>
+      ${realtorUrl ? `<a href="${realtorUrl}" target="_blank" rel="noopener" style="display:inline-block;margin-top:1rem;padding:0.6rem 1.2rem;background:var(--accent);color:#fff;border-radius:12px;text-decoration:none;font-size:0.85rem;font-weight:500">View on Realtor.com</a>` : ''}
+    </div>
+  `;
+  window._detailGalleryIdx = 0;
+  window._detailListing = listing;
+
+  document.getElementById('detailOverlay').classList.add('open');
+
+  // Lazy-fetch full photo set if we haven't already
+  if (!listing._fullPhotos && listing.propertyId) {
+    fetchFullPhotos(listing);
+  }
+}
+function closeDetail(e) {
+  if (e && e.target !== e.currentTarget) return;
+  document.getElementById('detailOverlay').classList.remove('open');
+}
+
+// ─── FETCH FULL PHOTOS ───
+async function fetchFullPhotos(listing) {
+  try {
+    const resp = await fetch(`https://${RAPIDAPI_HOST}/property/photos?property_id=${listing.propertyId}`, {
+      headers: {
+        'x-rapidapi-host': RAPIDAPI_HOST,
+        'x-rapidapi-key': RAPIDAPI_KEY
+      }
+    });
+    if (!resp.ok) return;
+    const data = await resp.json();
+    // API returns a raw array of photo objects, not { photos: [...] }
+    const photoArr = Array.isArray(data) ? data : (data.photos || []);
+    const allPhotos = photoArr.map(ph => ph.href).filter(Boolean);
+    if (allPhotos.length <= listing.photos.length) {
+      // No additional photos, just cache what we have
+      listing._fullPhotos = listing.photos;
+    } else {
+      listing._fullPhotos = allPhotos;
+    }
+
+    // If the detail modal is still showing this listing, update the gallery
+    if (window._detailListing === listing) {
+      const gallery = document.getElementById('detailGallery');
+      if (!gallery) return;
+      const curIdx = window._detailGalleryIdx;
+      // Remove loading indicator
+      const loadingEl = document.getElementById('galleryLoading');
+      if (loadingEl) loadingEl.remove();
+
+      // Replace gallery images with full set
+      gallery.querySelectorAll('.detail-gallery-img').forEach(el => el.remove());
+      const frag = document.createDocumentFragment();
+      listing._fullPhotos.forEach((ph, i) => {
+        const img = document.createElement('img');
+        img.src = photoUrl(ph, 'o');
+        img.className = 'detail-gallery-img' + (i === curIdx ? ' active' : '');
+        img.dataset.idx = i;
+        img.loading = 'lazy';
+        frag.appendChild(img);
+      });
+      gallery.prepend(frag);
+
+      // Ensure idx is still valid
+      if (curIdx >= listing._fullPhotos.length) {
+        window._detailGalleryIdx = 0;
+        gallery.querySelector('.detail-gallery-img')?.classList.add('active');
+      }
+
+      // Update counter
+      updateGalleryCounter();
+    }
+  } catch (e) {
+    console.warn('Failed to fetch full photos:', e);
+    // Remove loading indicator on error too
+    const loadingEl = document.getElementById('galleryLoading');
+    if (loadingEl) loadingEl.remove();
+  }
+}
+
+function updateGalleryCounter() {
+  const counter = document.getElementById('galleryCounter');
+  if (!counter) return;
+  const gallery = document.getElementById('detailGallery');
+  const total = gallery ? gallery.querySelectorAll('.detail-gallery-img').length : 0;
+  counter.textContent = `${window._detailGalleryIdx + 1} / ${total}`;
+}
+
+// ─── GALLERY NAV ───
+function galleryNav(dir) {
+  const gallery = document.getElementById('detailGallery');
+  if (!gallery) return;
+  const imgs = gallery.querySelectorAll('.detail-gallery-img');
+  let idx = window._detailGalleryIdx + dir;
+  if (idx < 0) idx = imgs.length - 1;
+  if (idx >= imgs.length) idx = 0;
+  imgs.forEach((img, i) => img.classList.toggle('active', i === idx));
+  window._detailGalleryIdx = idx;
+  updateGalleryCounter();
+}
+
+// ─── TOAST ───
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+</script>
+</body>
+</html>
