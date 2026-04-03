@@ -1408,7 +1408,8 @@ function showDetailFor(listing) {
         <button class="detail-close" onclick="closeDetail()">&#10005;</button>
       </div>`;
 
-  const realtorUrl = listing.permalink ? 'https://www.realtor.com/realestateandhomes-detail/' + listing.permalink : '';
+  const zillowQuery = [listing.addressLine1, listing.city, listing.state, listing.zipCode].filter(Boolean).join(' ');
+  const zillowUrl = zillowQuery ? 'https://www.zillow.com/homes/' + encodeURIComponent(zillowQuery) + '_rb/' : '';
 
   const modal = document.getElementById('detailModal');
   modal.innerHTML = `
@@ -1429,7 +1430,7 @@ function showDetailFor(listing) {
         ${daysOnMarket !== null ? `<span class="stat">${daysOnMarket} days on market</span>` : ''}
         ${listing.listedDate ? `<span class="stat">Listed ${daysAgo(listing.listedDate)}</span>` : ''}
       </div>
-      ${realtorUrl ? `<a href="${realtorUrl}" target="_blank" rel="noopener" style="display:inline-block;margin-top:1rem;padding:0.6rem 1.2rem;background:var(--accent);color:#fff;border-radius:12px;text-decoration:none;font-size:0.85rem;font-weight:500">View on Realtor.com</a>` : ''}
+      ${zillowUrl ? `<a href="${zillowUrl}" target="_blank" rel="noopener" style="display:inline-block;margin-top:1rem;padding:0.6rem 1.2rem;background:var(--accent);color:#fff;border-radius:12px;text-decoration:none;font-size:0.85rem;font-weight:500">View on Zillow</a>` : ''}
     </div>
   `;
   window._detailGalleryIdx = 0;
